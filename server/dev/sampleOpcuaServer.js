@@ -7,10 +7,11 @@
  *   - Demo/Random        : random Double in [0, 100)
  *   - Demo/Sine          : sine wave Double
  *   - Demo/Toggle        : Boolean flipping every 2s
+ *   - Demo/Setpoint      : writable Double (write to it to test tag writes)
  *
  * Run: npm run demo-opcua   (listens on opc.tcp://localhost:4840)
  */
-import { OPCUAServer, Variant, DataType } from 'node-opcua';
+import { OPCUAServer, Variant, DataType, StatusCodes } from 'node-opcua';
 
 const PORT = Number(process.env.OPCUA_PORT || 4840);
 
@@ -65,6 +66,22 @@ async function main() {
     browseName: 'Toggle',
     dataType: 'Boolean',
     value: { get: () => new Variant({ dataType: DataType.Boolean, value: toggle }) },
+  });
+
+  // Writable variable so tag writes can be tested end-to-end without hardware.
+  // Supplying a `set` accessor makes node-opcua mark this node CurrentWrite.
+  let setpoint = 0;
+  namespace.addVariable({
+    componentOf: demo,
+    browseName: 'Setpoint',
+    dataType: 'Double',
+    value: {
+      get: () => new Variant({ dataType: DataType.Double, value: setpoint }),
+      set: (variant) => {
+        setpoint = variant.value;
+        return StatusCodes.Good;
+      },
+    },
   });
 
   await server.start();

@@ -15,7 +15,8 @@ import MqttPanel from '../MqttPanel.jsx';
  *   onWatch:(connId:string,node:object)=>void,
  *   subscribedTopics:string[],
  *   onSubscribeTopic:(topic:string)=>void,
- *   onUnsubscribeTopic:(topic:string)=>void
+ *   onUnsubscribeTopic:(topic:string)=>void,
+ *   onPublishTopic:(topic:string,payload:string,retain:boolean)=>Promise<object>
  * }} props
  */
 export default function ExplorerView({
@@ -29,6 +30,7 @@ export default function ExplorerView({
   subscribedTopics,
   onSubscribeTopic,
   onUnsubscribeTopic,
+  onPublishTopic,
 }) {
   const showOpcua = activeOpcua && isUp(activeOpcua);
   const showMqtt = activeMqtt && isUp(activeMqtt);
@@ -63,6 +65,7 @@ export default function ExplorerView({
               subscribed={subscribedTopics}
               onSubscribe={onSubscribeTopic}
               onUnsubscribe={onUnsubscribeTopic}
+              onPublish={onPublishTopic}
             />
           )}
         </div>
