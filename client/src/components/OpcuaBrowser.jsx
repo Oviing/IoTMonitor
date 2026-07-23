@@ -3,7 +3,7 @@ import { emit, socket } from '../api/socket.js';
 
 const keyFor = (connId, id) => `${connId}::${id}`;
 
-export default function OpcuaBrowser({ connId, connName, subscribedKeys }) {
+export default function OpcuaBrowser({ connId, connName, subscribedKeys, onWatch }) {
   const [roots, setRoots] = useState(null);
   const [error, setError] = useState(null);
 
@@ -18,16 +18,21 @@ export default function OpcuaBrowser({ connId, connName, subscribedKeys }) {
 
   const subscribed = new Set(subscribedKeys);
 
-  const toggleSubscribe = (nodeId, isSubscribed) => {
-    if (isSubscribed) socket.emit('opcua:unsubscribe', { connId, nodeId });
-    else socket.emit('opcua:subscribe', { connId, nodeIds: [nodeId] });
+  const toggleSubscribe = (node, isSubscribed) => {
+    if (isSubscribed) {
+      socket.emit('opcua:unsubscribe', { connId, nodeId: node.nodeId });
+    } else {
+      socket.emit('opcua:subscribe', { connId, nodeIds: [node.nodeId] });
+      // remember the friendly name so live values read as "Counter", not the nodeId
+      onWatch?.(connId, node);
+    }
   };
 
   return (
     <section className="panel opcua-browser">
       <div className="panel-head">
-        <h3>Browse — {connName}</h3>
-        <span className="muted">OPC UA address space</span>
+        <span className="tag opcua">OPC UA</span>
+        <h3>{connName} — address space</h3>
       </div>
       {error && <div className="conn-error">{error}</div>}
       {!roots && !error && <div className="muted pad">Browsing…</div>}
@@ -80,7 +85,7 @@ function TreeNode({ connId, node, subscribed, onToggle }) {
             <input
               type="checkbox"
               checked={isSubscribed}
-              onChange={() => onToggle(node.nodeId, isSubscribed)}
+              onChange={() => onToggle(node, isSubscribed)}
             />
             watch
           </label>
