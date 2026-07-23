@@ -1,53 +1,79 @@
-/**
- * MetricCard — a per-signal "instrument": protocol badge, label, a large
- * mono readout that flashes on change, a type-appropriate Chart, and the
- * data type + last-changed footer. Renders the same live record the Live
- * Values table uses.
- */
 import React from 'react';
-import Chart from './Chart.jsx';
-import { fmtValue, fmtReadout, relTime, chartKind, colorVarFor, isBooleanValue } from '../format.js';
+import ChartSwitch from './charts/ChartSwitch.jsx';
+import ChartTypeMenu from './ChartTypeMenu.jsx';
+import QualityPill from './QualityPill.jsx';
+import { fmtValue, fmtAgo } from '../lib/format.js';
+import { isBooleanRecord } from '../lib/chartType.js';
 
-export default function MetricCard({ record, now, theme, onRemove }) {
-  const kind = chartKind(record);
-  const isBool = isBooleanValue(record);
-  const stale = record.lastTs && now - record.lastTs > 15000;
-  const boolOn = isBool && (record.value === true || record.value === 1 || record.value === 'true');
+/** Short display title from a nodeId / topic (last path segment). */
+function titleOf(label = '') {
+  const parts = String(label).split(/[/.]/).filter(Boolean);
+  return parts[parts.length - 1] || label;
+}
+
+function qualityTone(quality) {
+  if (!quality) return 'neutral';
+  const q = String(quality).toLowerCase();
+  if (q.includes('good')) return 'good';
+  if (q.includes('uncertain')) return 'warn';
+  return 'bad';
+}
+
+/**
+ * Per-signal instrument card: source badge, title/node, big mono readout (or
+ * ON/OFF for booleans), quality pill, the type-appropriate chart, a per-card
+ * chart-type override menu, and a footer (data type + relative last-changed).
+ *
+ * @param {{
+ *   record:object,
+ *   resolvedType:string,
+ *   menuValue:string,
+ *   allowed?:string[],
+ *   onChangeType:(type:string)=>void,
+ *   onRemove?:()=>void
+ * }} props
+ */
+export default function MetricCard({ record, resolvedType, menuValue, allowed, onChangeType, onRemove }) {
+  const isBool = isBooleanRecord(record);
+  const tone = qualityTone(record.quality);
+  const stripe = tone === 'bad' ? 'bad' : tone === 'warn' ? 'warn' : 'good';
+  const colorClass = record.source === 'opcua' ? 'accent-opcua' : 'accent-mqtt';
 
   return (
-    <div className="card">
-      <div className={`card-stripe ${stale ? 'stale' : ''}`} />
+    <div className={`card ${colorClass}`}>
+      <div className={`card-stripe ${stripe}`} />
       <div className="card-hd">
         <span className={`src-badge ${record.source}`}>{record.source === 'opcua' ? 'OPC UA' : 'MQTT'}</span>
-        <span className="title" title={record.label}>{record.label}</span>
-        <button
-          className="x"
-          title="Remove from view"
-          aria-label="Remove from view"
-          onClick={() => onRemove(record.connId, record.id)}
-        >
-          ✕
-        </button>
+        <span className="card-title" title={record.label}>
+          {titleOf(record.label)}
+        </span>
+        <ChartTypeMenu value={menuValue} onChange={onChangeType} allowed={allowed} compact />
+        {onRemove && (
+          <button className="btn edit danger" title="Remove from view" onClick={onRemove}>
+            ✕
+          </button>
+        )}
+      </div>
+      <div className="card-node mono" title={record.label}>
+        {record.label}
       </div>
       <div className="card-body">
         <div className="readout">
           {isBool ? (
-            <span key={record.lastTs} className={`boolstate ${boolOn ? 'on' : 'off'} ${record.flash ? 'flash' : ''}`}>
-              {boolOn ? 'ON' : 'OFF'}
-            </span>
+            <span className={`boolstate mono ${record.value ? 'on' : 'off'}`}>{fmtValue(record.value)}</span>
           ) : (
-            <span key={record.lastTs} className={`num ${record.flash ? 'flash' : ''}`} title={fmtValue(record.value)}>
-              {fmtReadout(record.value)}
+            <span key={record.lastTs} className={`num mono${record.flash ? ' flash' : ''}`}>
+              {fmtValue(record.value)}
             </span>
           )}
-          <span className="qual">
-            <span className={`pill ${stale ? 'muted' : 'good'}`}>{stale ? 'stale' : 'live'}</span>
+          <span className="readout-q">
+            <QualityPill quality={record.quality} />
           </span>
         </div>
-        <Chart history={record.history} kind={kind} colorVar={colorVarFor(record)} theme={theme} height={72} />
+        <ChartSwitch type={resolvedType} record={record} />
         <div className="card-ft">
-          <span>{record.dataType || '—'}</span>
-          <span>{relTime(record.lastChanged || record.lastTs, now)} ago</span>
+          <span className="mono">{record.dataType}</span>
+          <span>{fmtAgo(record.lastChanged)}</span>
         </div>
       </div>
     </div>

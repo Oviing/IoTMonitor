@@ -71,20 +71,31 @@ Real-time only: the browser talks to the server over **Socket.IO** — there is
   `explorer`) held in local state — no route changes.
 - `src/api/socket.js` — `socket.io-client` singleton + an `emit()` promise
   wrapper around ack callbacks.
-- `src/theme.js` — light/dark helper; writes `data-theme` on `<html>`, persists
-  to `localStorage`, falls back to `prefers-color-scheme`.
-- `src/format.js` — shared value/label/relative-time/chart-kind helpers.
+- `src/hooks/useTheme.js` — light/dark hook; writes `data-theme` on `<html>`,
+  persists to `localStorage`, falls back to `prefers-color-scheme`.
+- `src/hooks/useChartPrefs.js` — the chart-type preference model: one global
+  default plus per-signal overrides keyed by `${connId}::${id}`, persisted to
+  `localStorage` under `iotmonitor.chartPrefs`. `'auto'` means "follow the
+  global default" and clears the override.
+- `src/lib/format.js` — shared value/time/number-coercion helpers.
+- `src/lib/chartType.js` — which chart types apply to a signal
+  (`applicableTypes` / `resolveChartType`) and boolean detection.
 - `src/components/`:
   - `CommandBar.jsx` — top bar: brand, global search, view switch, server pill,
     theme toggle.
   - `ConnectionManager.jsx` (+ inline connection form) — the left rail's
     connection cards.
-  - `Overview.jsx` (+ `MetricCard.jsx`) — KPI strip + per-signal metric cards.
-  - `Chart.jsx` — dependency-free `<canvas>` line/area/boolean-timeline; also
-    the inline table trend. **No charting library** — keep it that way.
+  - `views/OverviewView.jsx` (+ `KpiTile.jsx`, `MetricCard.jsx`) — KPI strip +
+    per-signal metric cards; `views/LiveValuesView.jsx` — toolbar over the live
+    table; `views/ExplorerView.jsx` — the OPC UA / MQTT explorer.
+  - `charts/` — dependency-free hand-rolled **SVG** charts: `LineChart`,
+    `BarChart`, `Gauge`, `BooleanTimeline`, `Sparkline`, picked by
+    `ChartSwitch.jsx`. **No charting library** — keep it that way.
+  - `ChartTypeMenu.jsx` — the per-card / global chart-type picker;
+    `QualityPill.jsx` — OPC UA quality badge.
   - `OpcuaBrowser.jsx` (recursive address-space tree), `MqttPanel.jsx` (topic
-    subscribe) — the Explorer view.
-  - `LiveValues.jsx` — the unified table (grouping, filter, density).
+    subscribe) — rendered by the Explorer view.
+  - `LiveValues.jsx` — the unified table (grouping, density, sparkline trend).
 - `src/styles.css` — one global stylesheet. **Light + dark** via CSS custom
   properties: palette on `:root`, redefined under
   `@media (prefers-color-scheme: dark)` and overridden by

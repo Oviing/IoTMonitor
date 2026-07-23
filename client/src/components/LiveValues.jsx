@@ -1,58 +1,42 @@
+import React from 'react';
+import Sparkline from './charts/Sparkline.jsx';
+import QualityPill from './QualityPill.jsx';
+import { fmtTime, fmtValue } from '../lib/format.js';
+
 /**
- * LiveValues — the unified table of every watched tag/topic. Upgrades the
- * original table with a filter (driven by the command-bar search), a density
- * toggle, grouping by connection, an OPC UA quality cell, an inline canvas
- * trend, and relative last-changed times. Presentation only — same records
- * as the Overview cards.
+ * The unified live-values table. Rows update in place; the value cell is keyed
+ * on `lastTs` so the flash animation replays on each change (unchanged from the
+ * original). Adds a quality column and optional grouping/density presentation.
+ *
+ * @param {{
+ *   values:object[],
+ *   connections?:object[],
+ *   density?:('comfortable'|'compact'),
+ *   groupBy?:('connection'|'flat'),
+ *   onRemove:(connId:string,id:string)=>void
+ * }} props
  */
-import React, { useState } from 'react';
-import Chart from './Chart.jsx';
-import { fmtValue, relTime, chartKind, colorVarFor } from '../format.js';
+export default function LiveValues({ values, connections = [], density = 'comfortable', groupBy = 'flat', onRemove }) {
+  const sorted = [...values].sort((a, b) => a.label.localeCompare(b.label));
+  const connName = (connId) => connections.find((c) => c.id === connId)?.name || connId;
 
-export default function LiveValues({ values, onRemove, query, connections, now, theme }) {
-  const [compact, setCompact] = useState(false);
-  const [grouped, setGrouped] = useState(true);
-
-  const q = query.trim().toLowerCase();
-  const filtered = q ? values.filter((v) => v.label.toLowerCase().includes(q)) : values;
-  const sorted = [...filtered].sort((a, b) => a.label.localeCompare(b.label));
-
-  const nameFor = (connId) => connections.find((c) => c.id === connId)?.name || connId;
-
-  // Build render groups (by connection) or a single flat group.
-  const groups = [];
-  if (grouped) {
-    const byConn = new Map();
-    sorted.forEach((v) => {
-      if (!byConn.has(v.connId)) byConn.set(v.connId, []);
-      byConn.get(v.connId).push(v);
-    });
-    byConn.forEach((rows, connId) => groups.push({ connId, name: nameFor(connId), rows }));
-    groups.sort((a, b) => a.name.localeCompare(b.name));
-  } else {
-    groups.push({ connId: null, name: null, rows: sorted });
-  }
+  const groups =
+    groupBy === 'connection'
+      ? [...new Set(sorted.map((v) => v.connId))].map((connId) => ({
+          connId,
+          name: connName(connId),
+          rows: sorted.filter((v) => v.connId === connId),
+        }))
+      : [{ connId: null, name: null, rows: sorted }];
 
   return (
-    <section className={`view live-values ${compact ? 'compact' : ''}`}>
-      <div className="view-title">
-        <h2>Live Values</h2>
-        <p>{sorted.length} of {values.length} signal{values.length === 1 ? '' : 's'}</p>
+    <section className="panel live-values">
+      <div className="panel-head">
+        <h3>Live Values</h3>
+        <span className="muted">{sorted.length} subscribed</span>
       </div>
-
-      <div className="toolbar">
-        <div className="seg" role="group" aria-label="Density">
-          <button aria-pressed={!compact} onClick={() => setCompact(false)}>Comfortable</button>
-          <button aria-pressed={compact} onClick={() => setCompact(true)}>Compact</button>
-        </div>
-        <div className="seg" role="group" aria-label="Grouping">
-          <button aria-pressed={grouped} onClick={() => setGrouped(true)}>Group: Connection</button>
-          <button aria-pressed={!grouped} onClick={() => setGrouped(false)}>Flat</button>
-        </div>
-      </div>
-
       <div className="table-wrap">
-        <table>
+        <table className={density === 'compact' ? 'compact' : ''}>
           <thead>
             <tr>
               <th>Source</th>
@@ -69,49 +53,51 @@ export default function LiveValues({ values, onRemove, query, connections, now, 
             {sorted.length === 0 && (
               <tr>
                 <td colSpan={8} className="muted pad center">
-                  {values.length === 0
-                    ? 'Subscribe to OPC UA tags or MQTT topics to see live values here.'
-                    : `No signals match “${query}”.`}
+                  Subscribe to OPC UA tags or MQTT topics to see live values here.
                 </td>
               </tr>
             )}
-            {groups.map((g) => (
-              <React.Fragment key={g.connId || 'flat'}>
-                {g.name && (
+            {groups.map((group) => (
+              <React.Fragment key={group.connId ?? '__flat__'}>
+                {group.name != null && (
                   <tr className="grouprow">
                     <td colSpan={8}>
                       <span className="micro">
-                        <span className={`dot ${connections.find((c) => c.id === g.connId)?.status || 'disconnected'}`} />
-                        {g.name} · {g.rows.length} signal{g.rows.length === 1 ? '' : 's'}
+                        {group.name} · {group.rows.length} signals
                       </span>
                     </td>
                   </tr>
                 )}
-                {g.rows.map((v) => (
+                {group.rows.map((v) => (
                   <tr key={`${v.connId}::${v.id}`}>
-                    <td><span className={`src-badge ${v.source}`}>{v.source}</span></td>
-                    <td><span className="tagname ellipsis" title={v.label}>{v.label}</span></td>
                     <td>
+                      <span className={`src-badge ${v.source}`}>{v.source}</span>
+                    </td>
+                    <td className="mono ellipsis" title={v.label}>
+                      {v.label}
+                    </td>
+                    <td className="mono">
                       {/* keying on lastTs remounts the cell so the flash animation replays */}
                       <span key={v.lastTs} className={v.flash ? 'value flash' : 'value'}>
                         {fmtValue(v.value)}
                       </span>
                     </td>
-                    <td><span className="dtype">{v.dataType}</span></td>
-                    <td><QualityCell record={v} /></td>
+                    <td className="muted">{v.dataType}</td>
                     <td>
-                      <Chart
-                        history={v.history}
-                        kind={chartKind(v)}
-                        colorVar={colorVarFor(v)}
-                        theme={theme}
-                        height={26}
-                        width={96}
-                      />
+                      <QualityPill quality={v.quality} />
                     </td>
-                    <td><span className="ago">{relTime(v.lastChanged, now)}</span></td>
                     <td>
-                      <button className="x" title="Remove from view" aria-label="Remove" onClick={() => onRemove(v.connId, v.id)}>✕</button>
+                      <Sparkline history={v.history} />
+                    </td>
+                    <td className="muted">{fmtTime(v.lastChanged)}</td>
+                    <td>
+                      <button
+                        className="btn edit danger"
+                        title="Remove from view"
+                        onClick={() => onRemove(v.connId, v.id)}
+                      >
+                        ✕
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -122,11 +108,4 @@ export default function LiveValues({ values, onRemove, query, connections, now, 
       </div>
     </section>
   );
-}
-
-function QualityCell({ record }) {
-  if (record.source !== 'opcua') return <span className="muted">—</span>;
-  const q = record.quality || 'Good';
-  const cls = q === 'Good' ? 'good' : q === 'Bad' ? 'bad' : 'warn';
-  return <span className={`pill ${cls}`}>{q}</span>;
 }

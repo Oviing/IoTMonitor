@@ -19,8 +19,16 @@ const EMPTY_MQTT = {
   password: '',
 };
 
-export default function ConnectionManager({ connections, onBrowse, onOpenMqtt, activeOpcua, activeMqtt }) {
+export default function ConnectionManager({
+  connections,
+  liveValues = [],
+  onBrowse,
+  onOpenMqtt,
+  activeOpcua,
+  activeMqtt,
+}) {
   const [draft, setDraft] = useState(null); // config being edited/created
+  const watchedCount = (connId) => liveValues.filter((v) => v.connId === connId).length;
 
   const startNew = (type) => setDraft(type === 'opcua' ? { ...EMPTY_OPCUA } : { ...EMPTY_MQTT });
   const cancel = () => setDraft(null);
@@ -39,11 +47,15 @@ export default function ConnectionManager({ connections, onBrowse, onOpenMqtt, a
 
   return (
     <section className="conn-manager">
-      <div className="rail-head">
+      <div className="section-head">
         <span className="micro">Connections</span>
         <div className="add-buttons">
-          <button className="btn small ghost" onClick={() => startNew('opcua')}>+ OPC UA</button>
-          <button className="btn small ghost" onClick={() => startNew('mqtt')}>+ MQTT</button>
+          <button className="btn small" onClick={() => startNew('opcua')}>
+            + OPC UA
+          </button>
+          <button className="btn small" onClick={() => startNew('mqtt')}>
+            + MQTT
+          </button>
         </div>
       </div>
 
@@ -56,34 +68,51 @@ export default function ConnectionManager({ connections, onBrowse, onOpenMqtt, a
         {connections.map((c) => {
           const up = c.status === 'connected';
           const active = c.id === activeOpcua || c.id === activeMqtt;
+          const dotClass = up ? 'up' : c.status === 'error' ? 'warn' : 'down';
           return (
             <li key={c.id} className={`conn ${active ? 'active' : ''}`}>
               <div className="conn-top">
-                <span className={`dot ${c.status || 'disconnected'}`} title={c.statusMessage || c.status || 'disconnected'} />
-                <span className="conn-name" title={c.name}>{c.name}</span>
+                <span className={`dot ${dotClass}`} title={c.statusMessage || c.status} />
+                <span className="conn-name">{c.name}</span>
                 <span className={`tag ${c.type}`}>{c.type === 'opcua' ? 'OPC UA' : 'MQTT'}</span>
+                <button className="btn edit" onClick={() => setDraft(c)} title="Edit">
+                  ✎
+                </button>
+                <button className="btn edit danger" onClick={() => remove(c.id)} title="Delete">
+                  ✕
+                </button>
               </div>
-              <div className="conn-endpoint">{c.endpointUrl || c.brokerUrl}</div>
-
+              <div className="conn-ep mono">{c.endpointUrl || c.brokerUrl}</div>
+              <div className="conn-stats">
+                <span>
+                  <b>{watchedCount(c.id)}</b> watched
+                </span>
+                <span className="muted">{up ? 'connected' : c.status || 'disconnected'}</span>
+              </div>
+              <div className="conn-actions">
+                {up ? (
+                  <button className="btn small warn" onClick={() => disconnect(c.id)}>
+                    Disconnect
+                  </button>
+                ) : (
+                  <button className="btn small" onClick={() => connect(c.id)}>
+                    Connect
+                  </button>
+                )}
+                {up && c.type === 'opcua' && (
+                  <button className="btn small primary" onClick={() => onBrowse(c)}>
+                    Browse
+                  </button>
+                )}
+                {up && c.type === 'mqtt' && (
+                  <button className="btn small primary" onClick={() => onOpenMqtt(c)}>
+                    Topics
+                  </button>
+                )}
+              </div>
               {c.statusMessage && c.status === 'error' && (
                 <div className="conn-error">{c.statusMessage}</div>
               )}
-
-              <div className="conn-actions">
-                {up ? (
-                  <button className="btn small warn" onClick={() => disconnect(c.id)}>Disconnect</button>
-                ) : (
-                  <button className="btn small" onClick={() => connect(c.id)}>Connect</button>
-                )}
-                {up && c.type === 'opcua' && (
-                  <button className="btn small primary" onClick={() => onBrowse(c)}>Browse</button>
-                )}
-                {up && c.type === 'mqtt' && (
-                  <button className="btn small primary" onClick={() => onOpenMqtt(c)}>Topics</button>
-                )}
-                <button className="btn edit" onClick={() => setDraft(c)} title="Edit" aria-label="Edit">✎</button>
-                <button className="btn edit danger" onClick={() => remove(c.id)} title="Delete" aria-label="Delete">✕</button>
-              </div>
             </li>
           );
         })}
@@ -154,8 +183,12 @@ function ConnectionForm({ draft, setDraft, onSave, onCancel }) {
       </div>
 
       <div className="form-actions">
-        <button className="btn small primary" onClick={onSave}>Save</button>
-        <button className="btn small" onClick={onCancel}>Cancel</button>
+        <button className="btn small primary" onClick={onSave}>
+          Save
+        </button>
+        <button className="btn small" onClick={onCancel}>
+          Cancel
+        </button>
       </div>
     </div>
   );

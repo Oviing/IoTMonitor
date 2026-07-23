@@ -1,8 +1,3 @@
-/**
- * CommandBar — the top control strip: brand, global tag/topic search, the
- * Overview / Live Values / Explorer view switch, the server-connection pill,
- * and the light/dark theme toggle.
- */
 import React from 'react';
 
 const VIEWS = [
@@ -11,20 +6,35 @@ const VIEWS = [
   { id: 'explorer', label: 'Explorer' },
 ];
 
-export default function CommandBar({ view, onView, query, onQuery, connected, theme, onToggleTheme }) {
+/**
+ * Top command bar: brand, global tag/topic search, the view switch (tablist),
+ * the server-connection pill, and the light/dark theme toggle. Replaces the
+ * bare app header.
+ *
+ * @param {{
+ *   connected:boolean,
+ *   view:string,
+ *   onViewChange:(v:string)=>void,
+ *   search:string,
+ *   onSearch:(s:string)=>void,
+ *   theme:('light'|'dark'),
+ *   onToggleTheme:()=>void
+ * }} props
+ */
+export default function CommandBar({ connected, view, onViewChange, search, onSearch, theme, onToggleTheme }) {
   return (
     <header className="cmdbar">
       <div className="brand">
-        <span className="diamond" aria-hidden="true">◆</span> IoTMonitor <small>live</small>
+        <span className="diamond">◆</span> IoTMonitor
       </div>
 
       <label className="search">
         <span aria-hidden="true">⌕</span>
         <input
           type="text"
-          value={query}
-          onChange={(e) => onQuery(e.target.value)}
-          placeholder="Search tags &amp; topics…"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Search tags & topics…"
           aria-label="Search tags and topics"
         />
       </label>
@@ -35,7 +45,7 @@ export default function CommandBar({ view, onView, query, onQuery, connected, th
             key={v.id}
             role="tab"
             aria-selected={view === v.id}
-            onClick={() => onView(v.id)}
+            onClick={() => onViewChange(v.id)}
           >
             {v.label}
           </button>
@@ -43,8 +53,8 @@ export default function CommandBar({ view, onView, query, onQuery, connected, th
       </nav>
 
       <div className="cmd-right">
-        <span className={`server-pill ${connected ? '' : 'down'}`}>
-          <span className="live" aria-hidden="true" />
+        <span className={`server-pill ${connected ? 'up' : 'down'}`}>
+          <span className="live" />
           {connected ? 'server connected' : 'server offline'}
         </span>
         <button
