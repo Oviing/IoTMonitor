@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { socket } from './api/socket.js';
+import CommandBar from './components/CommandBar.jsx';
 import ConnectionManager from './components/ConnectionManager.jsx';
-import OpcuaBrowser from './components/OpcuaBrowser.jsx';
-import MqttPanel from './components/MqttPanel.jsx';
-import LiveValues from './components/LiveValues.jsx';
+import OverviewView from './components/views/OverviewView.jsx';
+import LiveValuesView from './components/views/LiveValuesView.jsx';
+import ExplorerView from './components/views/ExplorerView.jsx';
+import { useTheme } from './hooks/useTheme.js';
+import { useChartPrefs } from './hooks/useChartPrefs.js';
 
 const HISTORY_CAP = 60;
 const keyFor = (connId, id) => `${connId}::${id}`;
@@ -14,10 +17,20 @@ export default function App() {
   // liveValues: Map key -> value record. Kept in a ref for high-frequency updates,
   // mirrored into state via a version counter to trigger re-renders.
   const liveRef = useRef(new Map());
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   const bump = () => setTick((t) => (t + 1) % 1_000_000);
   const [activeOpcua, setActiveOpcua] = useState(null); // connId currently browsing
   const [activeMqtt, setActiveMqtt] = useState(null);
+
+  // shell UI state
+  const [view, setView] = useState('overview');
+  const [search, setSearch] = useState('');
+  const [theme, toggleTheme] = useTheme();
+  const prefs = useChartPrefs();
+
+  // rolling updates/sec counter for the Overview KPI (ref = hot path, sampled 1/s)
+  const updateCounter = useRef(0);
+  const [updatesPerSec, setUpdatesPerSec] = useState(0);
 
   useEffect(() => {
     const onConnect = () => setConnected(true);
@@ -39,6 +52,7 @@ export default function App() {
       });
       record.history = nextHistory.slice(-HISTORY_CAP);
       map.set(key, record);
+      updateCounter.current += 1;
       bump();
     };
 
@@ -89,7 +103,19 @@ export default function App() {
     };
   }, []);
 
-  const liveValues = useMemo(() => [...liveRef.current.values()], [liveRef.current.size, setTick]);
+  // sample the update counter once a second (kept off the hot path)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setUpdatesPerSec(updateCounter.current);
+      updateCounter.current = 0;
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Recompute the materialized array whenever a value updates (the version
+  // counter bumps on every socket upsert), so views see fresh records — not just
+  // when the number of signals changes.
+  const liveValues = useMemo(() => [...liveRef.current.values()], [tick]);
 
   const removeLive = (connId, id) => {
     liveRef.current.delete(keyFor(connId, id));
@@ -100,54 +126,72 @@ export default function App() {
   const mqttConns = connections.filter((c) => c.type === 'mqtt');
   const isUp = (connId) => connections.find((c) => c.id === connId)?.status === 'connected';
 
+  const openBrowse = (c) => {
+    setActiveOpcua(c.id);
+    setView('explorer');
+  };
+  const openMqtt = (c) => {
+    setActiveMqtt(c.id);
+    setView('explorer');
+  };
+
+  const subscribedKeys = liveValues
+    .filter((v) => v.source === 'opcua')
+    .map((v) => keyFor(v.connId, v.id));
+
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>
-          <span className="logo">◆</span> IoTMonitor
-        </h1>
-        <span className={`ws-status ${connected ? 'up' : 'down'}`}>
-          {connected ? 'server connected' : 'server offline'}
-        </span>
-      </header>
+      <CommandBar
+        connected={connected}
+        view={view}
+        onViewChange={setView}
+        search={search}
+        onSearch={setSearch}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
-      <div className="layout">
-        <aside className="sidebar">
+      <div className="body">
+        <aside className="rail">
           <ConnectionManager
             connections={connections}
-            onBrowse={(c) => setActiveOpcua(c.id)}
-            onOpenMqtt={(c) => setActiveMqtt(c.id)}
+            liveValues={liveValues}
+            onBrowse={openBrowse}
+            onOpenMqtt={openMqtt}
             activeOpcua={activeOpcua}
             activeMqtt={activeMqtt}
           />
         </aside>
 
-        <main className="main">
-          <div className="panels">
-            {activeOpcua && isUp(activeOpcua) && (
-              <OpcuaBrowser
-                connId={activeOpcua}
-                connName={opcuaConns.find((c) => c.id === activeOpcua)?.name}
-                subscribedKeys={liveValues.filter((v) => v.source === 'opcua').map((v) => keyFor(v.connId, v.id))}
-              />
-            )}
-            {activeMqtt && isUp(activeMqtt) && (
-              <MqttPanel
-                connId={activeMqtt}
-                connName={mqttConns.find((c) => c.id === activeMqtt)?.name}
-              />
-            )}
-            {!activeOpcua && !activeMqtt && (
-              <div className="empty-hint">
-                <p>Add a connection, connect it, then open its browser to subscribe to tags or topics.</p>
-                <p className="muted">
-                  Tip: run <code>npm run demo-opcua</code> and add <code>opc.tcp://localhost:4840</code> to try it out.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <LiveValues values={liveValues} onRemove={removeLive} />
+        <main className="canvas">
+          {view === 'overview' && (
+            <OverviewView
+              liveValues={liveValues}
+              connections={connections}
+              updatesPerSec={updatesPerSec}
+              search={search}
+              prefs={prefs}
+              onRemove={removeLive}
+            />
+          )}
+          {view === 'live' && (
+            <LiveValuesView
+              liveValues={liveValues}
+              connections={connections}
+              search={search}
+              onRemove={removeLive}
+            />
+          )}
+          {view === 'explorer' && (
+            <ExplorerView
+              activeOpcua={activeOpcua}
+              activeMqtt={activeMqtt}
+              opcuaConns={opcuaConns}
+              mqttConns={mqttConns}
+              isUp={isUp}
+              subscribedKeys={subscribedKeys}
+            />
+          )}
         </main>
       </div>
     </div>

@@ -19,8 +19,16 @@ const EMPTY_MQTT = {
   password: '',
 };
 
-export default function ConnectionManager({ connections, onBrowse, onOpenMqtt, activeOpcua, activeMqtt }) {
+export default function ConnectionManager({
+  connections,
+  liveValues = [],
+  onBrowse,
+  onOpenMqtt,
+  activeOpcua,
+  activeMqtt,
+}) {
   const [draft, setDraft] = useState(null); // config being edited/created
+  const watchedCount = (connId) => liveValues.filter((v) => v.connId === connId).length;
 
   const startNew = (type) => setDraft(type === 'opcua' ? { ...EMPTY_OPCUA } : { ...EMPTY_MQTT });
   const cancel = () => setDraft(null);
@@ -40,7 +48,7 @@ export default function ConnectionManager({ connections, onBrowse, onOpenMqtt, a
   return (
     <section className="conn-manager">
       <div className="section-head">
-        <h2>Connections</h2>
+        <span className="micro">Connections</span>
         <div className="add-buttons">
           <button className="btn small" onClick={() => startNew('opcua')}>
             + OPC UA
@@ -56,18 +64,17 @@ export default function ConnectionManager({ connections, onBrowse, onOpenMqtt, a
       )}
 
       <ul className="conn-list">
-        {connections.length === 0 && !draft && <li className="muted">No connections yet.</li>}
+        {connections.length === 0 && !draft && <li className="muted small">No connections yet.</li>}
         {connections.map((c) => {
           const up = c.status === 'connected';
           const active = c.id === activeOpcua || c.id === activeMqtt;
+          const dotClass = up ? 'up' : c.status === 'error' ? 'warn' : 'down';
           return (
-            <li key={c.id} className={`conn-item ${active ? 'active' : ''}`}>
-              <div className="conn-row">
-                <span className={`dot ${c.status || 'disconnected'}`} title={c.statusMessage || c.status} />
-                <div className="conn-meta">
-                  <span className="conn-name">{c.name}</span>
-                  <span className="conn-type">{c.type.toUpperCase()}</span>
-                </div>
+            <li key={c.id} className={`conn ${active ? 'active' : ''}`}>
+              <div className="conn-top">
+                <span className={`dot ${dotClass}`} title={c.statusMessage || c.status} />
+                <span className="conn-name">{c.name}</span>
+                <span className={`tag ${c.type}`}>{c.type === 'opcua' ? 'OPC UA' : 'MQTT'}</span>
                 <button className="btn edit" onClick={() => setDraft(c)} title="Edit">
                   ✎
                 </button>
@@ -75,7 +82,13 @@ export default function ConnectionManager({ connections, onBrowse, onOpenMqtt, a
                   ✕
                 </button>
               </div>
-              <div className="conn-endpoint">{c.endpointUrl || c.brokerUrl}</div>
+              <div className="conn-ep mono">{c.endpointUrl || c.brokerUrl}</div>
+              <div className="conn-stats">
+                <span>
+                  <b>{watchedCount(c.id)}</b> watched
+                </span>
+                <span className="muted">{up ? 'connected' : c.status || 'disconnected'}</span>
+              </div>
               <div className="conn-actions">
                 {up ? (
                   <button className="btn small warn" onClick={() => disconnect(c.id)}>
