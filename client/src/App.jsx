@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { socket } from './api/socket.js';
+import { socket, emit } from './api/socket.js';
 import { getInitialTheme, applyTheme, saveTheme } from './theme.js';
 import CommandBar from './components/CommandBar.jsx';
 import ConnectionManager from './components/ConnectionManager.jsx';
@@ -164,6 +164,10 @@ export default function App() {
     socket.emit('mqtt:unsubscribe', { connId, topic });
     setMqttTopics((prev) => ({ ...prev, [connId]: (prev[connId] || []).filter((t) => t !== topic) }));
   };
+  // Publish a message so the monitor can be tested from the UI. Returns the ack
+  // so the panel can surface success/failure inline.
+  const publishMessage = (connId, topic, payload, retain) =>
+    emit('mqtt:publish', { connId, topic, payload, retain });
 
   const isUp = (connId) => connections.find((c) => c.id === connId)?.status === 'connected';
   const opcuaConns = connections.filter((c) => c.type === 'opcua');
@@ -259,6 +263,8 @@ export default function App() {
                       subscribed={mqttTopics[activeMqtt] || []}
                       onSubscribe={(t) => subscribeTopic(activeMqtt, t)}
                       onUnsubscribe={(t) => unsubscribeTopic(activeMqtt, t)}
+                      onPublish={(topic, payload, retain) =>
+                        publishMessage(activeMqtt, topic, payload, retain)}
                     />
                   )}
                 </div>

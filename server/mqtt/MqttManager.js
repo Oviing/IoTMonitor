@@ -111,6 +111,24 @@ export class MqttManager extends EventEmitter {
     entry.client.unsubscribe(topic);
   }
 
+  /**
+   * Publish a message to a topic (for testing the monitor from the UI). The app
+   * does not auto-subscribe to what it publishes, so the message only shows up
+   * in the live view if the topic (or a matching wildcard) is already subscribed.
+   * @param {string} connId
+   * @param {string} topic
+   * @param {string} payload
+   * @param {{ retain?: boolean, qos?: 0|1|2 }} [opts]
+   */
+  publish(connId, topic, payload, opts = {}) {
+    const entry = this.connections.get(connId);
+    if (!entry) throw new Error('not connected');
+    entry.client.publish(topic, String(payload ?? ''), {
+      qos: opts.qos ?? 0,
+      retain: !!opts.retain,
+    });
+  }
+
   async shutdown() {
     await Promise.allSettled([...this.connections.keys()].map((id) => this.disconnect(id)));
   }

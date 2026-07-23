@@ -17,6 +17,8 @@ import {
   TimestampsToReturn,
   MessageSecurityMode,
   SecurityPolicy,
+  DataType,
+  Variant,
 } from 'node-opcua';
 
 const ROOT_OBJECTS = 'ObjectsFolder';
@@ -191,6 +193,36 @@ export class OpcuaManager extends EventEmitter {
     }
   }
 
+  /**
+   * Write a value to a node (for testing the monitor from the UI). The data type
+   * is auto-detected by reading the node's current Value, so the caller only
+   * supplies a raw (typically string) value which is coerced to match.
+   * @param {string} connId
+   * @param {string} nodeId
+   * @param {unknown} rawValue
+   * @returns {Promise<{ dataType: string, value: unknown }>}
+   */
+  async write(connId, nodeId, rawValue) {
+    const conn = this.connections.get(connId);
+    if (!conn) throw new Error('not connected');
+
+    // Auto-detect: read the current Value to learn its Variant dataType.
+    const current = await conn.session.read({ nodeId, attributeId: AttributeIds.Value });
+    const dataType = current.value?.dataType;
+    if (dataType == null) throw new Error('could not determine data type for node');
+
+    const value = coerceInput(rawValue, dataType);
+    const statusCode = await conn.session.write({
+      nodeId,
+      attributeId: AttributeIds.Value,
+      value: { value: new Variant({ dataType, value }) },
+    });
+    if (typeof statusCode?.isGood === 'function' && !statusCode.isGood()) {
+      throw new Error(statusCode.name || 'write failed');
+    }
+    return { dataType: DataType[dataType] ?? String(dataType), value };
+  }
+
   /** Tear down every connection (process shutdown). */
   async shutdown() {
     await Promise.allSettled([...this.connections.keys()].map((id) => this.disconnect(id)));
@@ -202,4 +234,42 @@ function coerceValue(value) {
   if (typeof value === 'bigint') return value.toString();
   if (ArrayBuffer.isView(value)) return Array.from(value);
   return value;
+}
+
+/** DataType enum values that represent integers (see node-opcua DataType). */
+const INTEGER_TYPES = new Set([
+  DataType.SByte,
+  DataType.Byte,
+  DataType.Int16,
+  DataType.UInt16,
+  DataType.Int32,
+  DataType.UInt32,
+  DataType.Int64,
+  DataType.UInt64,
+]);
+const FLOAT_TYPES = new Set([DataType.Float, DataType.Double]);
+
+/**
+ * Coerce a raw (usually string) input into the JS type expected for a given
+ * OPC UA DataType. Throws on values that can't be represented numerically so the
+ * failure is reported back through the socket ack.
+ * @param {unknown} raw
+ * @param {number} dataType a node-opcua DataType enum value
+ */
+function coerceInput(raw, dataType) {
+  if (dataType === DataType.Boolean) {
+    if (typeof raw === 'boolean') return raw;
+    return /^(true|1)$/i.test(String(raw).trim());
+  }
+  if (INTEGER_TYPES.has(dataType)) {
+    const n = Number.parseInt(String(raw).trim(), 10);
+    if (Number.isNaN(n)) throw new Error(`"${raw}" is not a valid integer`);
+    return n;
+  }
+  if (FLOAT_TYPES.has(dataType)) {
+    const n = Number.parseFloat(String(raw));
+    if (Number.isNaN(n)) throw new Error(`"${raw}" is not a valid number`);
+    return n;
+  }
+  return String(raw);
 }

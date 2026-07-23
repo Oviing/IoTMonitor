@@ -57,6 +57,11 @@ function TreeNode({ connId, node, subscribed, onToggle }) {
   const [loading, setLoading] = useState(false);
   const isSubscribed = subscribed.has(keyFor(connId, node.nodeId));
 
+  // Inline write form (collapsed by default). Data type is auto-detected server-side.
+  const [writeOpen, setWriteOpen] = useState(false);
+  const [writeValue, setWriteValue] = useState('');
+  const [writeStatus, setWriteStatus] = useState(null); // { ok, error?, dataType? }
+
   const expand = async () => {
     if (open) {
       setOpen(false);
@@ -71,6 +76,13 @@ function TreeNode({ connId, node, subscribed, onToggle }) {
     }
   };
 
+  const write = async () => {
+    setWriteStatus(null);
+    const res = await emit('opcua:write', { connId, nodeId: node.nodeId, value: writeValue });
+    setWriteStatus(res);
+    if (res?.ok) setTimeout(() => setWriteStatus(null), 2000);
+  };
+
   return (
     <li className="tree-node">
       <div className="tree-row">
@@ -81,16 +93,43 @@ function TreeNode({ connId, node, subscribed, onToggle }) {
           {node.displayName}
         </span>
         {node.isVariable && (
-          <label className="sub-check" title="Subscribe to this tag">
-            <input
-              type="checkbox"
-              checked={isSubscribed}
-              onChange={() => onToggle(node, isSubscribed)}
-            />
-            watch
-          </label>
+          <>
+            <label className="sub-check" title="Subscribe to this tag">
+              <input
+                type="checkbox"
+                checked={isSubscribed}
+                onChange={() => onToggle(node, isSubscribed)}
+              />
+              watch
+            </label>
+            <button
+              className={`btn small write-toggle${writeOpen ? ' active' : ''}`}
+              onClick={() => setWriteOpen((v) => !v)}
+              title="Write a value to this tag"
+            >
+              write
+            </button>
+          </>
         )}
       </div>
+      {node.isVariable && writeOpen && (
+        <div className="write-row">
+          <input
+            value={writeValue}
+            onChange={(e) => setWriteValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && write()}
+            placeholder="value"
+            aria-label="Value to write"
+          />
+          <button className="btn small primary" onClick={write}>Write</button>
+          {writeStatus?.ok && (
+            <span className="ok-note small">wrote {String(writeStatus.value)}</span>
+          )}
+          {writeStatus && !writeStatus.ok && (
+            <span className="write-err small">{writeStatus.error}</span>
+          )}
+        </div>
+      )}
       {open && (
         <ul className="tree">
           {loading && <li className="muted pad">Loading…</li>}
