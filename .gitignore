@@ -1,0 +1,10 @@
+node_modules/
+client/dist/
+data/connections.json
+
+# node-opcua generates certificate stores at runtime
+**/PKI/
+certificates/
+*.log
+.DS_Store
+.env

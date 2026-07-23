@@ -1,0 +1,28 @@
+{
+  "name": "iotmonitor",
+  "version": "0.1.0",
+  "description": "Live monitor for OPC UA and MQTT — browse tags, subscribe, and watch incoming values change in real time.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "nodemon server/index.js",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently -n server,client -c blue,green \"npm run server\" \"npm run client\"",
+    "build": "npm run build --prefix client",
+    "demo-opcua": "node server/dev/sampleOpcuaServer.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mqtt": "^5.7.0",
+    "nanoid": "^5.0.7",
+    "node-opcua": "^2.128.0",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.4"
+  }
+}
