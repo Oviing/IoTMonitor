@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IoTMonitor — Modern UI Concept</title>
+</head>
+<body>
+<style>
+  /* ============================================================= *
+   *  IoTMonitor — modern UI concept mockup
+   *  "Phosphor on graphite": cool graphite ground, one cyan accent
+   *  for interaction + live traces, cool protocol hues, warm colors
+   *  reserved for status. Self-contained, no external requests.
+   * ============================================================= */
+
+  :root {
+    --ground:#0d1117; --surface-1:#151b24; --surface-2:#1c2530; --surface-3:#232e3b;
+    --border:#263140; --border-soft:#1e2733;
+    --text:#e6edf5; --text-dim:#9fb0c3; --text-mute:#6b7b8f;
+    --accent:#22c3e6; --accent-ink:#04141a; --accent-soft:rgba(34,195,230,.14);
+    --opcua:#6e8bff; --opcua-soft:rgba(110,139,255,.16);
+    --mqtt:#c264ff; --mqtt-soft:rgba(194,100,255,.16);
+    --good:#3fb950; --warn:#e3a008; --danger:#f04e4e;
+    --good-soft:rgba(63,185,80,.16); --warn-soft:rgba(227,160,8,.16); --danger-soft:rgba(240,78,78,.16);
+    --grid:rgba(255,255,255,.05);
+    --shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 8px 24px -12px rgba(0,0,0,.6);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Fira Code",Consolas,monospace;
+    --sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:light){
+    :root{
+      --ground:#f4f6f9; --surface-1:#ffffff; --surface-2:#ffffff; --surface-3:#eef1f5;
+      --border:#dce1e8; --border-soft:#e8ecf1;
+      --text:#0f1720; --text-dim:#51606f; --text-mute:#7a8898;
+      --accent:#0891b2; --accent-ink:#ffffff; --accent-soft:rgba(8,145,178,.12);
+      --opcua:#4457d6; --opcua-soft:rgba(68,87,214,.12);
+      --mqtt:#9333ea; --mqtt-soft:rgba(147,51,234,.12);
+      --good:#1a7f37; --warn:#9a6700; --danger:#cf222e;
+      --good-soft:rgba(26,127,55,.12); --warn-soft:rgba(154,103,0,.12); --danger-soft:rgba(207,34,46,.12);
+      --grid:rgba(0,0,0,.06);
+      --shadow:0 1px 2px rgba(16,23,32,.04), 0 8px 24px -16px rgba(16,23,32,.2);
+    }
+  }
+  /* explicit toggle wins over the media query in both directions */
+  :root[data-theme="dark"]{
+    --ground:#0d1117; --surface-1:#151b24; --surface-2:#1c2530; --surface-3:#232e3b;
+    --border:#263140; --border-soft:#1e2733;
+    --text:#e6edf5; --text-dim:#9fb0c3; --text-mute:#6b7b8f;
+    --accent:#22c3e6; --accent-ink:#04141a; --accent-soft:rgba(34,195,230,.14);
+    --opcua:#6e8bff; --opcua-soft:rgba(110,139,255,.16);
+    --mqtt:#c264ff; --mqtt-soft:rgba(194,100,255,.16);
+    --good:#3fb950; --warn:#e3a008; --danger:#f04e4e;
+    --good-soft:rgba(63,185,80,.16); --warn-soft:rgba(227,160,8,.16); --danger-soft:rgba(240,78,78,.16);
+    --grid:rgba(255,255,255,.05);
+    --shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"]{
+    --ground:#f4f6f9; --surface-1:#ffffff; --surface-2:#ffffff; --surface-3:#eef1f5;
+    --border:#dce1e8; --border-soft:#e8ecf1;
+    --text:#0f1720; --text-dim:#51606f; --text-mute:#7a8898;
+    --accent:#0891b2; --accent-ink:#ffffff; --accent-soft:rgba(8,145,178,.12);
+    --opcua:#4457d6; --opcua-soft:rgba(68,87,214,.12);
+    --mqtt:#9333ea; --mqtt-soft:rgba(147,51,234,.12);
+    --good:#1a7f37; --warn:#9a6700; --danger:#cf222e;
+    --good-soft:rgba(26,127,55,.12); --warn-soft:rgba(154,103,0,.12); --danger-soft:rgba(207,34,46,.12);
+    --grid:rgba(0,0,0,.06);
+    --shadow:0 1px 2px rgba(16,23,32,.04), 0 8px 24px -16px rgba(16,23,32,.2);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--ground); color:var(--text); font-family:var(--sans);
+    font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+  .micro{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-mute); font-weight:600}
+  h1,h2,h3{margin:0; text-wrap:balance}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+
+  /* ---- shell ---- */
+  .app{min-height:100vh; display:flex; flex-direction:column}
+
+  .cmdbar{
+    display:flex; align-items:center; gap:14px; padding:10px 16px;
+    background:var(--surface-1); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:20;
+  }
+  .brand{display:flex; align-items:center; gap:9px; font-weight:700; font-size:15px; letter-spacing:.2px; white-space:nowrap}
+  .brand .diamond{color:var(--accent); filter:drop-shadow(0 0 6px var(--accent-soft)); font-size:15px}
+  .brand small{color:var(--text-mute); font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.08em}
+
+  .search{
+    flex:1; min-width:0; max-width:420px; display:flex; align-items:center; gap:8px;
+    background:var(--surface-3); border:1px solid var(--border); border-radius:8px; padding:7px 11px; color:var(--text-dim);
+  }
+  .search input{
+    border:none; background:none; color:var(--text); font-family:inherit; font-size:13px; width:100%; outline:none;
+  }
+  .search input::placeholder{color:var(--text-mute)}
+  .search .kbd{border:1px solid var(--border); border-radius:5px; padding:1px 6px; font-size:11px; color:var(--text-mute)}
+
+  .viewswitch{display:flex; gap:2px; background:var(--surface-3); border:1px solid var(--border); border-radius:9px; padding:3px}
+  .viewswitch button{
+    border:none; background:none; color:var(--text-dim); padding:6px 13px; border-radius:6px;
+    font-size:13px; font-weight:600; cursor:pointer; transition:background .15s,color .15s;
+  }
+  .viewswitch button:hover{color:var(--text)}
+  .viewswitch button[aria-selected="true"]{background:var(--surface-1); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.25)}
+
+  .cmd-right{margin-left:auto; display:flex; align-items:center; gap:10px}
+  .server-pill{
+    display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600;
+    padding:5px 11px; border-radius:999px; border:1px solid var(--good); color:var(--good); background:var(--good-soft);
+  }
+  .server-pill .live{width:7px; height:7px; border-radius:50%; background:var(--good); box-shadow:0 0 0 0 var(--good); animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 var(--good-soft)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .icon-btn{
+    width:34px; height:34px; display:grid; place-items:center; cursor:pointer;
+    background:var(--surface-3); border:1px solid var(--border); border-radius:8px; color:var(--text-dim); font-size:15px;
+    transition:color .15s,border-color .15s;
+  }
+  .icon-btn:hover{color:var(--text); border-color:var(--accent)}
+
+  .body{flex:1; display:grid; grid-template-columns:264px 1fr; min-height:0}
+
+  /* ---- connections rail ---- */
+  .rail{border-right:1px solid var(--border); background:var(--surface-1); padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto}
+  .rail-head{display:flex; align-items:center; justify-content:space-between}
+  .btn{
+    display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:12.5px; font-weight:600;
+    padding:6px 11px; border-radius:7px; border:1px solid var(--border); background:var(--surface-3); color:var(--text);
+    transition:border-color .15s,background .15s;
+  }
+  .btn:hover{border-color:var(--accent)}
+  .btn.accent{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+  .btn.ghost{background:none}
+  .btn.sm{padding:4px 9px; font-size:12px}
+
+  .conn{
+    border:1px solid var(--border); border-radius:11px; background:var(--surface-2);
+    padding:11px; display:flex; flex-direction:column; gap:9px; cursor:pointer; position:relative; overflow:hidden;
+    transition:border-color .15s, transform .1s;
+  }
+  .conn:hover{border-color:var(--text-mute)}
+  .conn.active{border-color:var(--accent)}
+  .conn.active::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent)}
+  .conn-top{display:flex; align-items:center; gap:8px}
+  .dot{width:9px; height:9px; border-radius:50%; flex:none}
+  .dot.up{background:var(--good); box-shadow:0 0 7px var(--good)}
+  .dot.warn{background:var(--warn); box-shadow:0 0 7px var(--warn)}
+  .dot.down{background:var(--text-mute)}
+  .conn-name{font-weight:650; font-size:13.5px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .tag{font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:2px 7px; border-radius:5px}
+  .tag.opcua{color:var(--opcua); background:var(--opcua-soft)}
+  .tag.mqtt{color:var(--mqtt); background:var(--mqtt-soft)}
+  .conn-ep{font-size:11px; color:var(--text-mute); word-break:break-all}
+  .conn-stats{display:flex; gap:14px; font-size:11px; color:var(--text-dim)}
+  .conn-stats b{color:var(--text); font-weight:650}
+
+  /* ---- main canvas ---- */
+  .canvas{overflow:auto; padding:18px 20px 40px}
+  .view{display:none; flex-direction:column; gap:18px}
+  .view.on{display:flex}
+  .view-title{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap}
+  .view-title h2{font-size:18px; font-weight:700; letter-spacing:.2px}
+  .view-title p{margin:0; color:var(--text-dim); font-size:13px}
+
+  /* KPI strip */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
+  .kpi{
+    background:var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:14px 15px;
+    display:flex; flex-direction:column; gap:6px; box-shadow:var(--shadow); position:relative; overflow:hidden;
+  }
+  .kpi .micro{display:flex; align-items:center; gap:6px}
+  .kpi .val{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:27px; font-weight:600; line-height:1}
+  .kpi .sub{font-size:11.5px; color:var(--text-dim)}
+  .kpi .sub .up{color:var(--good)} .kpi .sub .dn{color:var(--danger)}
+  .kpi.alarm{border-color:var(--warn)}
+  .kpi.alarm .val{color:var(--warn)}
+  .kpi .spark{position:absolute; right:0; bottom:0; opacity:.5}
+
+  /* metric card grid */
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px}
+  .card{
+    background:var(--surface-1); border:1px solid var(--border); border-radius:14px; overflow:hidden;
+    box-shadow:var(--shadow); display:flex; flex-direction:column;
+  }
+  .card-stripe{height:3px; background:var(--good)}
+  .card-stripe.warn{background:var(--warn)}
+  .card-hd{display:flex; align-items:center; gap:9px; padding:12px 14px 6px}
+  .card-hd .title{font-weight:650; font-size:13.5px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .card-body{padding:2px 14px 14px; display:flex; flex-direction:column; gap:10px}
+  .readout{display:flex; align-items:baseline; gap:7px}
+  .readout .num{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:30px; font-weight:600; line-height:1; letter-spacing:-.5px}
+  .readout .unit{font-size:13px; color:var(--text-dim); font-weight:600}
+  .readout .qual{margin-left:auto}
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:650; padding:3px 9px; border-radius:999px}
+  .pill.good{color:var(--good); background:var(--good-soft)}
+  .pill.warn{color:var(--warn); background:var(--warn-soft)}
+  .pill.bad{color:var(--danger); background:var(--danger-soft)}
+  .pill::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
+  .chart{width:100%; height:74px; display:block}
+  .card-ft{display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--text-mute); padding-top:2px}
+
+  .boolstate{font-family:var(--mono); font-weight:700; font-size:30px; letter-spacing:.5px}
+  .boolstate.on{color:var(--accent)} .boolstate.off{color:var(--text-mute)}
+
+  /* live values table */
+  .toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .filter{display:flex; align-items:center; gap:8px; background:var(--surface-1); border:1px solid var(--border); border-radius:8px; padding:6px 10px; flex:1; min-width:180px; max-width:320px}
+  .filter input{border:none; background:none; color:var(--text); outline:none; font-size:13px; width:100%; font-family:inherit}
+  .filter input::placeholder{color:var(--text-mute)}
+  .seg{display:flex; gap:2px; background:var(--surface-3); border:1px solid var(--border); border-radius:8px; padding:3px}
+  .seg button{border:none; background:none; color:var(--text-dim); font-size:12px; font-weight:600; padding:5px 10px; border-radius:6px; cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--surface-1); color:var(--text)}
+
+  .table-wrap{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--surface-1)}
+  table{width:100%; border-collapse:collapse}
+  thead th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-mute);
+    font-weight:700; padding:10px 14px; background:var(--surface-2); border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  .grouprow td{padding:8px 14px; background:var(--surface-2); border-bottom:1px solid var(--border)}
+  .grouprow .micro{display:flex; align-items:center; gap:8px}
+  tbody td{padding:9px 14px; border-bottom:1px solid var(--border-soft); white-space:nowrap; vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:var(--surface-2)}
+  .badge{font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:3px 8px; border-radius:5px}
+  .badge.opcua{color:var(--opcua); background:var(--opcua-soft)} .badge.mqtt{color:var(--mqtt); background:var(--mqtt-soft)}
+  .tagname{font-family:var(--mono); font-size:12.5px; color:var(--text)}
+  .tval{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:14px; font-weight:600; padding:2px 6px; border-radius:5px; display:inline-block}
+  .tval.flash{animation:flash .8s ease-out}
+  @keyframes flash{0%{background:var(--accent); color:var(--accent-ink)}100%{background:transparent}}
+  .dtype{font-size:11.5px; color:var(--text-dim); font-family:var(--mono)}
+  .ago{font-size:11.5px; color:var(--text-mute); font-variant-numeric:tabular-nums}
+  .rowspark{display:block}
+  .x{cursor:pointer; color:var(--text-mute); border:none; background:none; font-size:14px; padding:2px 6px; border-radius:5px}
+  .x:hover{color:var(--danger); background:var(--danger-soft)}
+
+  /* explorer */
+  .explorer{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .panel{background:var(--surface-1); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow)}
+  .panel-hd{display:flex; align-items:center; gap:9px; padding:12px 14px; border-bottom:1px solid var(--border); background:var(--surface-2)}
+  .panel-hd h3{font-size:13.5px; font-weight:650; flex:1}
+  .panel-bd{padding:8px 6px}
+  .tree{list-style:none; margin:0; padding:0; font-size:13px}
+  .tree li{padding:0}
+  .node{display:flex; align-items:center; gap:6px; padding:4px 8px; border-radius:7px; cursor:pointer}
+  .node:hover{background:var(--surface-3)}
+  .node .tw{width:14px; color:var(--text-mute); font-size:10px}
+  .node .nm{flex:1}
+  .node .leaf{color:var(--opcua)}
+  .tree .tree{margin-left:14px; border-left:1px solid var(--border); padding-left:4px}
+  .watch{display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-mute)}
+  .watch input{accent-color:var(--accent)}
+  .topics{display:flex; flex-wrap:wrap; gap:7px; padding:6px}
+  .chip{display:inline-flex; align-items:center; gap:7px; background:var(--surface-3); border:1px solid var(--border); border-radius:7px; padding:5px 6px 5px 10px; font-family:var(--mono); font-size:12px}
+  .chip .x{padding:0 4px}
+  .topic-add{display:flex; gap:8px; padding:6px}
+  .topic-add input{flex:1; background:var(--surface-3); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:7px 10px; font-family:var(--mono); font-size:12.5px; outline:none}
+
+  .concept-note{
+    margin-top:6px; border:1px dashed var(--border); border-radius:12px; padding:14px 16px; color:var(--text-dim); font-size:12.5px;
+    display:flex; gap:12px; align-items:flex-start; background:var(--surface-1);
+  }
+  .concept-note b{color:var(--text)}
+  .concept-note .k{color:var(--accent); font-weight:700}
+
+  @media (max-width:900px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .explorer{grid-template-columns:1fr}
+  }
+  @media (max-width:720px){
+    .body{grid-template-columns:1fr}
+    .rail{flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1px solid var(--border)}
+    .rail .rail-head{display:none}
+    .conn{min-width:210px}
+    .search{display:none}
+    .viewswitch button{padding:6px 10px}
+    .brand small{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important; animation-iteration-count:1 !important}
+  }
+</style>
+
+<div class="app">
+  <!-- command bar -->
+  <header class="cmdbar">
+    <div class="brand"><span class="diamond">◆</span> IoTMonitor <small>concept</small></div>
+    <label class="search">
+      <span aria-hidden="true">⌕</span>
+      <input type="text" placeholder="Search tags &amp; topics…" aria-label="Search tags and topics">
+      <span class="kbd">/</span>
+    </label>
+    <nav class="viewswitch" role="tablist" aria-label="View">
+      <button role="tab" aria-selected="true"  data-view="overview">Overview</button>
+      <button role="tab" aria-selected="false" data-view="live">Live Values</button>
+      <button role="tab" aria-selected="false" data-view="explorer">Explorer</button>
+    </nav>
+    <div class="cmd-right">
+      <span class="server-pill"><span class="live"></span> server connected</span>
+      <button class="icon-btn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">☾</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- connections rail -->
+    <aside class="rail">
+      <div class="rail-head"><span class="micro">Connections</span><button class="btn sm ghost">+ Add</button></div>
+
+      <div class="conn active" tabindex="0">
+        <div class="conn-top"><span class="dot up"></span><span class="conn-name">Line A · PLC</span><span class="tag opcua">OPC UA</span></div>
+        <div class="conn-ep mono">opc.tcp://10.0.4.11:4840</div>
+        <div class="conn-stats"><span><b>8</b> tags</span><span><b>36</b>/s</span><span class="pill good" style="padding:1px 7px">healthy</span></div>
+      </div>
+
+      <div class="conn" tabindex="0">
+        <div class="conn-top"><span class="dot up"></span><span class="conn-name">Plant Broker</span><span class="tag mqtt">MQTT</span></div>
+        <div class="conn-ep mono">mqtt://broker.plant.local:1883</div>
+        <div class="conn-stats"><span><b>4</b> topics</span><span><b>12</b>/s</span><span class="pill warn" style="padding:1px 7px">1 alert</span></div>
+      </div>
+
+      <div class="conn" tabindex="0">
+        <div class="conn-top"><span class="dot down"></span><span class="conn-name">Line B · PLC</span><span class="tag opcua">OPC UA</span></div>
+        <div class="conn-ep mono">opc.tcp://10.0.4.22:4840</div>
+        <div class="conn-stats"><span class="micro" style="text-transform:none;font-weight:600">disconnected</span></div>
+      </div>
+    </aside>
+
+    <!-- main canvas -->
+    <main class="canvas">
+
+      <!-- OVERVIEW -->
+      <section class="view on" id="view-overview">
+        <div class="view-title">
+          <h2>Overview</h2>
+          <p>Line A · PLC — 8 watched signals, live</p>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi">
+            <span class="micro">Active connections</span>
+            <span class="val">2<span style="font-size:15px;color:var(--text-mute)"> / 3</span></span>
+            <span class="sub">Line B offline</span>
+          </div>
+          <div class="kpi">
+            <span class="micro">Watched signals</span>
+            <span class="val" id="kpiTags">12</span>
+            <span class="sub">8 OPC UA · 4 MQTT</span>
+          </div>
+          <div class="kpi">
+            <span class="micro">Updates / sec</span>
+            <span class="val" id="kpiRate">48</span>
+            <span class="sub"><span class="up">▲ steady</span></span>
+          </div>
+          <div class="kpi alarm">
+            <span class="micro">Active alerts</span>
+            <span class="val">1</span>
+            <span class="sub">Flow above high limit</span>
+          </div>
+        </div>
+
+        <div class="view-title" style="margin-top:2px"><h2 style="font-size:14px">Live signals</h2></div>
+        <div class="cards" id="cardGrid"><!-- cards injected --></div>
+
+        <div class="concept-note">
+          <span class="k">◆</span>
+          <div>This is an <b>interactive concept mockup</b> — data is simulated in-browser (the four demo variables <span class="mono">Counter · Random · Sine · Toggle</span> plus MQTT process values). Every view renders the same payload shape the app's <span class="mono">opcua:value</span> / <span class="mono">mqtt:message</span> Socket.IO events already deliver. See <b>docs/UI_CONCEPT.md</b> for the full write-up.</div>
+        </div>
+      </section>
+
+      <!-- LIVE VALUES -->
+      <section class="view" id="view-live">
+        <div class="view-title"><h2>Live Values</h2><p>All watched tags &amp; topics, updating in real time</p></div>
+        <div class="toolbar">
+          <label class="filter"><span aria-hidden="true">⌕</span><input id="liveFilter" placeholder="Filter by tag or topic…" aria-label="Filter rows"></label>
+          <div class="seg" role="group" aria-label="Density">
+            <button aria-pressed="true">Comfortable</button><button aria-pressed="false">Compact</button>
+          </div>
+          <div class="seg" role="group" aria-label="Group by">
+            <button aria-pressed="true">Group: Connection</button><button aria-pressed="false">Flat</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="liveTable">
+            <thead><tr>
+              <th>Source</th><th>Tag / Topic</th><th>Value</th><th>Type</th><th>Quality</th><th>Trend</th><th>Last changed</th><th></th>
+            </tr></thead>
+            <tbody id="liveBody"><!-- rows injected --></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- EXPLORER -->
+      <section class="view" id="view-explorer">
+        <div class="view-title"><h2>Explorer</h2><p>Browse the OPC UA address space and subscribe to MQTT topics</p></div>
+        <div class="explorer">
+          <div class="panel">
+            <div class="panel-hd"><span class="tag opcua">OPC UA</span><h3>Line A · PLC — address space</h3></div>
+            <div class="panel-bd">
+              <ul class="tree">
+                <li>
+                  <div class="node"><span class="tw">▾</span><span class="nm">Objects</span></div>
+                  <ul class="tree">
+                    <li>
+                      <div class="node"><span class="tw">▾</span><span class="nm">Demo</span></div>
+                      <ul class="tree">
+                        <li><div class="node"><span class="tw"></span><span class="nm leaf">Counter</span><label class="watch"><input type="checkbox" checked>watch</label></div></li>
+                        <li><div class="node"><span class="tw"></span><span class="nm leaf">Random</span><label class="watch"><input type="checkbox" checked>watch</label></div></li>
+                        <li><div class="node"><span class="tw"></span><span class="nm leaf">Sine</span><label class="watch"><input type="checkbox" checked>watch</label></div></li>
+                        <li><div class="node"><span class="tw"></span><span class="nm leaf">Toggle</span><label class="watch"><input type="checkbox" checked>watch</label></div></li>
+                      </ul>
+                    </li>
+                    <li><div class="node"><span class="tw">▸</span><span class="nm">Line A</span></div></li>
+                    <li><div class="node"><span class="tw">▸</span><span class="nm">Diagnostics</span></div></li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><span class="tag mqtt">MQTT</span><h3>Plant Broker — topics</h3></div>
+            <div class="panel-bd">
+              <div class="topic-add"><input class="mono" value="plant/line-a/#" aria-label="Topic to subscribe"><button class="btn accent sm">Subscribe</button></div>
+              <div class="topics">
+                <span class="chip">plant/line-a/flow<button class="x" aria-label="Unsubscribe">✕</button></span>
+                <span class="chip">plant/line-a/temp<button class="x" aria-label="Unsubscribe">✕</button></span>
+                <span class="chip">plant/line-a/pressure<button class="x" aria-label="Unsubscribe">✕</button></span>
+                <span class="chip">plant/status<button class="x" aria-label="Unsubscribe">✕</button></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div aria-live="polite" class="micro" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)" id="sr"></div>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
+  function cssvar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+  // ---- theme toggle ----
+  var themeBtn = document.getElementById("themeBtn");
+  function currentDark(){
+    var t = document.documentElement.getAttribute("data-theme");
+    if(t) return t === "dark";
+    return matchMedia("(prefers-color-scheme:dark)").matches;
+  }
+  function syncIcon(){ themeBtn.textContent = currentDark() ? "☀" : "☾"; }
+  themeBtn.addEventListener("click", function(){
+    document.documentElement.setAttribute("data-theme", currentDark() ? "light" : "dark");
+    syncIcon();
+  });
+  syncIcon();
+
+  // ---- view switch ----
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".viewswitch button"));
+  tabs.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      tabs.forEach(function(b){ b.setAttribute("aria-selected", b===btn ? "true":"false"); });
+      document.querySelectorAll(".view").forEach(function(v){ v.classList.remove("on"); });
+      document.getElementById("view-"+btn.dataset.view).classList.add("on");
+    });
+  });
+
+  // ---- signal model: rolling buffers matching the demo variables ----
+  var N = 48;
+  function buf(seed){ var a=[]; for(var i=0;i<N;i++) a.push(seed); return a; }
+  var S = {
+    counter:{ v:1284, hist:buf(1284), kind:"line",  src:"opcua", type:"Int32",  unit:"", node:"Demo/Counter" },
+    sine:{    v:0,    hist:buf(0),    kind:"area",  src:"opcua", type:"Double", unit:"", node:"Demo/Sine",  phase:0 },
+    random:{  v:0.5,  hist:buf(0.5),  kind:"line",  src:"opcua", type:"Double", unit:"", node:"Demo/Random" },
+    toggle:{  v:1,    hist:buf(1),    kind:"bool",  src:"opcua", type:"Boolean",unit:"", node:"Demo/Toggle" },
+    flow:{    v:41.2, hist:buf(41),   kind:"gauge", src:"mqtt",  type:"Double", unit:"m³/h", node:"plant/line-a/flow", min:0, max:60, hi:48 },
+    temp:{    v:62.4, hist:buf(62),   kind:"area",  src:"mqtt",  type:"Double", unit:"°C", node:"plant/line-a/temp" }
+  };
+  var changedFlags = {};
+
+  function step(){
+    var k;
+    S.counter.v += 1; mark("counter");
+    S.sine.phase += 0.32; S.sine.v = +(Math.sin(S.sine.phase)).toFixed(3); mark("sine");
+    S.random.v = clamp(S.random.v + (Math.random()-0.5)*0.18, 0, 1); S.random.v=+S.random.v.toFixed(3); mark("random");
+    if(Math.random() < 0.18){ S.toggle.v = S.toggle.v ? 0 : 1; mark("toggle"); }
+    S.flow.v = clamp(S.flow.v + (Math.random()-0.48)*2.4, 8, 58); S.flow.v=+S.flow.v.toFixed(1);
+      if(Math.random()<0.5) mark("flow");
+    S.temp.v = clamp(S.temp.v + (Math.random()-0.5)*0.7, 55, 70); S.temp.v=+S.temp.v.toFixed(1);
+      if(Math.random()<0.6) mark("temp");
+    for(k in S){ S[k].hist.push(S[k].v); if(S[k].hist.length>N) S[k].hist.shift(); }
+  }
+  function mark(k){ changedFlags[k]=true; }
+  function clamp(v,a,b){ return v<a?a:v>b?b:v; }
+  function fmt(s){
+    if(s.kind==="bool") return s.v?"ON":"OFF";
+    if(s.type==="Int32") return String(s.v);
+    return s.v.toFixed( s===S.sine?3: (s===S.random?3:1) );
+  }
+
+  // ---- chart drawing (canvas, DPR-aware) ----
+  function prep(cv){
+    var dpr = window.devicePixelRatio||1, r=cv.getBoundingClientRect();
+    var w=Math.max(r.width,60), h=cv.clientHeight||74;
+    cv.width=w*dpr; cv.height=h*dpr; var ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h); return {ctx:ctx,w:w,h:h};
+  }
+  function grid(ctx,w,h){
+    ctx.strokeStyle=cssvar("--grid"); ctx.lineWidth=1;
+    for(var i=1;i<4;i++){ var y=Math.round(h*i/4)+.5; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  }
+  function pts(hist,w,h,pad){
+    var mn=Math.min.apply(null,hist), mx=Math.max.apply(null,hist); if(mx-mn<1e-9) mx=mn+1;
+    return hist.map(function(v,i){
+      return { x: i/(hist.length-1)*w, y: pad + (1-(v-mn)/(mx-mn))*(h-2*pad) };
+    });
+  }
+  function drawLine(cv,hist,color,fill){
+    var p=prep(cv), ctx=p.ctx; grid(ctx,p.w,p.h);
+    var P=pts(hist,p.w,p.h,6);
+    if(fill){
+      var g=ctx.createLinearGradient(0,0,0,p.h);
+      g.addColorStop(0,color+"55"); g.addColorStop(1,color+"00");
+      ctx.beginPath(); ctx.moveTo(P[0].x,p.h);
+      P.forEach(function(pt){ctx.lineTo(pt.x,pt.y);}); ctx.lineTo(P[P.length-1].x,p.h);
+      ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+    }
+    ctx.beginPath(); P.forEach(function(pt,i){ i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y); });
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.lineJoin="round"; ctx.stroke();
+    var last=P[P.length-1];
+    ctx.beginPath(); ctx.arc(last.x,last.y,3,0,7); ctx.fillStyle=color; ctx.fill();
+    ctx.beginPath(); ctx.arc(last.x,last.y,6,0,7); ctx.strokeStyle=color+"66"; ctx.lineWidth=2; ctx.stroke();
+  }
+  function drawBool(cv,hist,color){
+    var p=prep(cv), ctx=p.ctx, w=p.w, h=p.h, midY=h/2, bh=14;
+    ctx.strokeStyle=cssvar("--grid"); ctx.beginPath(); ctx.moveTo(0,midY+.5); ctx.lineTo(w,midY+.5); ctx.stroke();
+    var step=w/(hist.length-1);
+    for(var i=0;i<hist.length-1;i++){
+      if(hist[i]){ ctx.fillStyle=color+"cc"; ctx.fillRect(i*step, midY-bh, step+1, bh); }
+      else { ctx.fillStyle=cssvar("--text-mute")+"44"; ctx.fillRect(i*step, midY+2, step+1, bh); }
+    }
+  }
+  function drawGauge(cv,s,color){
+    var p=prep(cv), ctx=p.ctx, w=p.w, h=p.h;
+    var cx=w/2, cy=h-6, R=Math.min(w/2-6, h-14), a0=Math.PI, a1=2*Math.PI;
+    var frac=(s.v-s.min)/(s.max-s.min), a=a0+(a1-a0)*clamp(frac,0,1);
+    ctx.lineWidth=9; ctx.lineCap="round";
+    ctx.beginPath(); ctx.arc(cx,cy,R,a0,a1); ctx.strokeStyle=cssvar("--surface-3"); ctx.stroke();
+    var hiA=a0+(a1-a0)*((s.hi-s.min)/(s.max-s.min));
+    ctx.beginPath(); ctx.arc(cx,cy,R,hiA,a1); ctx.strokeStyle=cssvar("--warn")+"55"; ctx.stroke();
+    var over = s.v>=s.hi;
+    ctx.beginPath(); ctx.arc(cx,cy,R,a0,a); ctx.strokeStyle=over?cssvar("--warn"):color; ctx.stroke();
+  }
+
+  // ---- build metric cards ----
+  var cardDefs = [
+    {k:"counter",title:"Counter",  render:function(c){drawLine(c,S.counter.hist,cssvar("--opcua"),false);} },
+    {k:"sine",   title:"Sine",     render:function(c){drawLine(c,S.sine.hist,cssvar("--accent"),true);} },
+    {k:"flow",   title:"Flow rate",render:function(c){drawGauge(c,S.flow,cssvar("--mqtt"));} },
+    {k:"random", title:"Random",   render:function(c){drawLine(c,S.random.hist,cssvar("--opcua"),false);} },
+    {k:"toggle", title:"Toggle",   render:function(c){drawBool(c,S.toggle.hist,cssvar("--accent"));} },
+    {k:"temp",   title:"Temperature",render:function(c){drawLine(c,S.temp.hist,cssvar("--mqtt"),true);} }
+  ];
+  var grid1 = document.getElementById("cardGrid");
+  cardDefs.forEach(function(d){
+    var s=S[d.k], warn = d.k==="flow";
+    var el=document.createElement("div"); el.className="card"; el.dataset.k=d.k;
+    el.innerHTML =
+      '<div class="card-stripe'+(warn?' warn':'')+'"></div>'+
+      '<div class="card-hd"><span class="badge '+s.src+'">'+(s.src==="opcua"?"OPC UA":"MQTT")+'</span>'+
+        '<span class="title">'+d.title+'</span>'+
+        '<span class="micro" style="text-transform:none;font-weight:600">'+s.node+'</span></div>'+
+      '<div class="card-body">'+
+        '<div class="readout">'+ ( d.k==="toggle"
+            ? '<span class="boolstate on" data-role="bool"></span>'
+            : '<span class="num" data-role="num"></span><span class="unit">'+s.unit+'</span>' )+
+          '<span class="qual"><span class="pill '+(warn?'warn':'good')+'">'+(warn?'high':'good')+'</span></span></div>'+
+        '<canvas class="chart" data-role="chart"></canvas>'+
+        '<div class="card-ft"><span>'+s.type+'</span><span data-role="ago">just now</span></div>'+
+      '</div>';
+    grid1.appendChild(el);
+    d.canvas = el.querySelector("[data-role=chart]");
+    d.numEl  = el.querySelector("[data-role=num]");
+    d.boolEl = el.querySelector("[data-role=bool]");
+    d.agoEl  = el.querySelector("[data-role=ago]");
+  });
+
+  // ---- build live table (grouped) ----
+  var rowsDef = [
+    {group:"Line A · PLC", src:"opcua", items:["counter","random","sine","toggle"]},
+    {group:"Plant Broker", src:"mqtt",  items:["flow","temp"]}
+  ];
+  var body = document.getElementById("liveBody");
+  var rowEls = {};
+  rowsDef.forEach(function(g){
+    var gr=document.createElement("tr"); gr.className="grouprow";
+    gr.innerHTML='<td colspan="8"><span class="micro"><span class="dot up"></span>'+g.group+' · '+g.items.length+' signals</span></td>';
+    body.appendChild(gr);
+    g.items.forEach(function(k){
+      var s=S[k];
+      var tr=document.createElement("tr"); tr.dataset.k=k; tr.dataset.name=(s.node).toLowerCase();
+      tr.innerHTML=
+        '<td><span class="badge '+s.src+'">'+(s.src==="opcua"?"OPC UA":"MQTT")+'</span></td>'+
+        '<td><span class="tagname">'+s.node+'</span></td>'+
+        '<td><span class="tval" data-role="v"></span></td>'+
+        '<td><span class="dtype">'+s.type+'</span></td>'+
+        '<td><span class="pill '+(k==="flow"?"warn":"good")+'">'+(k==="flow"?"high":"good")+'</span></td>'+
+        '<td><canvas class="rowspark" width="96" height="26" data-role="spark"></canvas></td>'+
+        '<td><span class="ago" data-role="ago">0s</span></td>'+
+        '<td><button class="x" aria-label="Remove">✕</button></td>';
+      body.appendChild(tr);
+      rowEls[k]={ v:tr.querySelector("[data-role=v]"), spark:tr.querySelector("[data-role=spark]"), ago:tr.querySelector("[data-role=ago]"), tr:tr, last:0 };
+    });
+  });
+
+  // filter
+  document.getElementById("liveFilter").addEventListener("input", function(e){
+    var q=e.target.value.toLowerCase();
+    Object.keys(rowEls).forEach(function(k){
+      var tr=rowEls[k].tr; tr.style.display = tr.dataset.name.indexOf(q)>=0 ? "" : "none";
+    });
+  });
+
+  function drawSpark(cv,hist,color){
+    var dpr=window.devicePixelRatio||1; cv.width=96*dpr; cv.height=26*dpr;
+    var ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,96,26);
+    var P=pts(hist,96,26,4);
+    ctx.beginPath(); P.forEach(function(pt,i){i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y);});
+    ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
+    var l=P[P.length-1]; ctx.beginPath(); ctx.arc(l.x,l.y,2,0,7); ctx.fillStyle=color; ctx.fill();
+  }
+
+  // ---- render loop ----
+  var elapsed={}; Object.keys(S).forEach(function(k){elapsed[k]=0;});
+  function renderCards(){
+    cardDefs.forEach(function(d){
+      var s=S[d.k];
+      if(d.numEl) d.numEl.textContent = fmt(s);
+      if(d.boolEl){ d.boolEl.textContent=fmt(s); d.boolEl.className="boolstate "+(s.v?"on":"off"); }
+      d.render(d.canvas);
+      d.agoEl.textContent = elapsed[d.k]<1 ? "just now" : elapsed[d.k]+"s ago";
+    });
+  }
+  function renderTable(){
+    Object.keys(rowEls).forEach(function(k){
+      var s=S[k], r=rowEls[k], color = s.src==="opcua"?cssvar("--opcua"):cssvar("--mqtt");
+      r.v.textContent = fmt(s);
+      if(changedFlags[k] && !reduce){ r.v.classList.remove("flash"); void r.v.offsetWidth; r.v.classList.add("flash"); }
+      drawSpark(r.spark, s.hist, color);
+      r.ago.textContent = elapsed[k]+"s";
+    });
+  }
+  function tickMeta(){
+    Object.keys(S).forEach(function(k){ if(changedFlags[k]) elapsed[k]=0; else elapsed[k]+=1; });
+  }
+
+  var kpiRate=document.getElementById("kpiRate");
+  function loop(){
+    step(); renderCards(); renderTable();
+    // announce a couple of changes for screen readers, throttled
+    if(changedFlags.flow) document.getElementById("sr").textContent="Flow rate "+S.flow.v+" cubic metres per hour";
+    changedFlags={}; tickMeta();
+    kpiRate.textContent = 44 + Math.round(Math.random()*8);
+  }
+
+  // initial paint + interval
+  step(); renderCards(); renderTable();
+  if(!reduce){
+    setInterval(loop, 850);
+  }
+  window.addEventListener("resize", function(){ renderCards(); renderTable(); });
+})();
+</script>
+</body>
+</html>
