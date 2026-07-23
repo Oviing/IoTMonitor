@@ -66,15 +66,36 @@ Real-time only: the browser talks to the server over **Socket.IO** — there is
 
 ### Frontend (`client/`, React 18 + Vite, plain JSX)
 
-- `src/main.jsx` → `src/App.jsx` — single-screen app, no router. `App.jsx` holds
-  all socket wiring and the live-value state.
+- `src/main.jsx` → `src/App.jsx` — no router. `App.jsx` owns all socket wiring
+  and live-value state, and switches between three views (`overview` / `live` /
+  `explorer`) held in local state — no route changes.
 - `src/api/socket.js` — `socket.io-client` singleton + an `emit()` promise
   wrapper around ack callbacks.
-- `src/components/` — `ConnectionManager.jsx` (+ inline connection form),
-  `OpcuaBrowser.jsx` (recursive address-space tree), `MqttPanel.jsx` (topic
-  subscribe), `LiveValues.jsx` (the unified table + `Sparkline`).
-- `src/styles.css` — one global stylesheet, dark theme via CSS custom properties
-  in `:root`.
+- `src/theme.js` — light/dark helper; writes `data-theme` on `<html>`, persists
+  to `localStorage`, falls back to `prefers-color-scheme`.
+- `src/format.js` — shared value/label/relative-time/chart-kind helpers.
+- `src/components/`:
+  - `CommandBar.jsx` — top bar: brand, global search, view switch, server pill,
+    theme toggle.
+  - `ConnectionManager.jsx` (+ inline connection form) — the left rail's
+    connection cards.
+  - `Overview.jsx` (+ `MetricCard.jsx`) — KPI strip + per-signal metric cards.
+  - `Chart.jsx` — dependency-free `<canvas>` line/area/boolean-timeline; also
+    the inline table trend. **No charting library** — keep it that way.
+  - `OpcuaBrowser.jsx` (recursive address-space tree), `MqttPanel.jsx` (topic
+    subscribe) — the Explorer view.
+  - `LiveValues.jsx` — the unified table (grouping, filter, density).
+- `src/styles.css` — one global stylesheet. **Light + dark** via CSS custom
+  properties: palette on `:root`, redefined under
+  `@media (prefers-color-scheme: dark)` and overridden by
+  `:root[data-theme="light"|"dark"]` so the toggle wins. Style through the
+  tokens, not inside the media query.
+
+The live-value payload carries only the OPC UA `nodeId`; `App.jsx` keeps a
+`labelsRef` map of friendly display names captured when a node is watched, so
+values read as e.g. `Counter` rather than `ns=1;i=1001` (falls back to the
+nodeId). MQTT subscribed-topic state also lives in `App.jsx` so it survives
+view switches.
 
 ## Conventions
 

@@ -6,8 +6,17 @@ the four functional areas the app already has: connection management, OPC UA
 address-space browsing, MQTT topic subscription, and the unified live-values
 view.
 
-This is a **concept + interactive mockup**, not an implementation. No app code in
-`server/` or `client/` is changed by this document.
+> **Status: implemented.** This concept now ships in the `client/` app — the
+> command bar, connections rail, Overview / Live Values / Explorer views,
+> KPI strip, metric cards with canvas charts, light + dark themes, and the
+> upgraded live table are all live. The document below remains the design
+> rationale; the sections marked forward-looking (radial gauges, alerting/
+> thresholds) are intentionally still out of scope, matching the README's
+> non-goals.
+
+Originally a **concept + interactive mockup**. The Socket.IO data contract in
+`server/` is unchanged — the redesign was a presentation-layer refactor of
+`client/`.
 
 - **Clickable mockup (in repo):** [`ui-mockup.html`](./ui-mockup.html) — open it in a browser.
 - **Published mockup (Artifact):** https://claude.ai/code/artifact/1e2789e4-cefe-4ce0-98a3-507f5f5c4fa8
