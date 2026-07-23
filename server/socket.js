@@ -129,6 +129,15 @@ export function attachSockets(io) {
       ack?.({ ok: true });
     });
 
+    socket.on('opcua:write', async ({ connId, nodeId, value }, ack) => {
+      try {
+        const written = await opcua.write(connId, nodeId, value);
+        ack?.({ ok: true, ...written });
+      } catch (err) {
+        ack?.({ ok: false, error: err.message });
+      }
+    });
+
     // --- MQTT ------------------------------------------------------------
     socket.on('mqtt:subscribe', ({ connId, topic }, ack) => {
       try {
@@ -143,6 +152,15 @@ export function attachSockets(io) {
       mqtt.unsubscribe(connId, topic);
       history.clear(keyFor(connId, topic));
       ack?.({ ok: true });
+    });
+
+    socket.on('mqtt:publish', ({ connId, topic, payload, retain }, ack) => {
+      try {
+        mqtt.publish(connId, topic, payload, { retain });
+        ack?.({ ok: true });
+      } catch (err) {
+        ack?.({ ok: false, error: err.message });
+      }
     });
 
     // --- History ---------------------------------------------------------
