@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { emit, socket } from '../api/socket.js';
+import { emit } from '../api/socket.js';
 
 const keyFor = (connId, id) => `${connId}::${id}`;
 
-export default function OpcuaBrowser({ connId, connName, subscribedKeys, onWatch }) {
+export default function OpcuaBrowser({ connId, connName, subscribedKeys, onWatch, onUnwatch }) {
   const [roots, setRoots] = useState(null);
   const [error, setError] = useState(null);
 
@@ -20,10 +20,8 @@ export default function OpcuaBrowser({ connId, connName, subscribedKeys, onWatch
 
   const toggleSubscribe = (node, isSubscribed) => {
     if (isSubscribed) {
-      socket.emit('opcua:unsubscribe', { connId, nodeId: node.nodeId });
+      onUnwatch?.(connId, node.nodeId);
     } else {
-      socket.emit('opcua:subscribe', { connId, nodeIds: [node.nodeId] });
-      // remember the friendly name so live values read as "Counter", not the nodeId
       onWatch?.(connId, node);
     }
   };

@@ -13,6 +13,7 @@ import MqttPanel from '../MqttPanel.jsx';
  *   isUp:(connId:string)=>boolean,
  *   subscribedKeys:string[],
  *   onWatch:(connId:string,node:object)=>void,
+ *   onUnwatch:(connId:string,nodeId:string)=>void,
  *   subscribedTopics:string[],
  *   onSubscribeTopic:(topic:string)=>void,
  *   onUnsubscribeTopic:(topic:string)=>void,
@@ -27,6 +28,7 @@ export default function ExplorerView({
   isUp,
   subscribedKeys,
   onWatch,
+  onUnwatch,
   subscribedTopics,
   onSubscribeTopic,
   onUnsubscribeTopic,
@@ -57,6 +59,7 @@ export default function ExplorerView({
               connName={opcuaConns.find((c) => c.id === activeOpcua)?.name}
               subscribedKeys={subscribedKeys}
               onWatch={onWatch}
+              onUnwatch={onUnwatch}
             />
           )}
           {showMqtt && (

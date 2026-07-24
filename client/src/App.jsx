@@ -25,6 +25,7 @@ export default function App() {
   const [activeOpcua, setActiveOpcua] = useState(null); // connId currently browsing
   const [activeMqtt, setActiveMqtt] = useState(null);
   const [mqttTopics, setMqttTopics] = useState({}); // { connId: [topic, …] }
+  const [watchedNodes, setWatchedNodes] = useState({}); // { connId: [nodeId, …] }
 
   // shell UI state
   const [view, setView] = useState('overview');
@@ -142,6 +143,28 @@ export default function App() {
     labelsRef.current.set(keyFor(connId, node.nodeId), node.displayName);
   };
 
+  // OPC UA node subscriptions live here (like mqttTopics) so the watch checkbox
+  // reflects the user's intent immediately and survives view switches, rather than
+  // only ticking once a live value happens to arrive.
+  const watchNode = (connId, node) => {
+    if (!connId || !node?.nodeId) return;
+    socket.emit('opcua:subscribe', { connId, nodeIds: [node.nodeId] });
+    // remember the friendly name so live values read as "Counter", not the nodeId
+    rememberLabel(connId, node);
+    setWatchedNodes((prev) => {
+      const cur = prev[connId] || [];
+      if (cur.includes(node.nodeId)) return prev;
+      return { ...prev, [connId]: [...cur, node.nodeId] };
+    });
+  };
+  const unwatchNode = (connId, nodeId) => {
+    socket.emit('opcua:unsubscribe', { connId, nodeId });
+    setWatchedNodes((prev) => ({
+      ...prev,
+      [connId]: (prev[connId] || []).filter((n) => n !== nodeId),
+    }));
+  };
+
   // MQTT topic subscriptions live here so they survive view switches.
   const subscribeTopic = (connId, topic) => {
     if (!connId || !topic) return;
@@ -172,9 +195,9 @@ export default function App() {
     setView('explorer');
   };
 
-  const subscribedKeys = liveValues
-    .filter((v) => v.source === 'opcua')
-    .map((v) => keyFor(v.connId, v.id));
+  const subscribedKeys = Object.entries(watchedNodes).flatMap(([connId, ids]) =>
+    ids.map((id) => keyFor(connId, id))
+  );
 
   return (
     <div className="app">
@@ -227,7 +250,8 @@ export default function App() {
               mqttConns={mqttConns}
               isUp={isUp}
               subscribedKeys={subscribedKeys}
-              onWatch={rememberLabel}
+              onWatch={watchNode}
+              onUnwatch={unwatchNode}
               subscribedTopics={mqttTopics[activeMqtt] || []}
               onSubscribeTopic={(t) => subscribeTopic(activeMqtt, t)}
               onUnsubscribeTopic={(t) => unsubscribeTopic(activeMqtt, t)}
