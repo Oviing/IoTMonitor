@@ -6,21 +6,30 @@ flash when a value changes, last-changed timestamps, and a small trend sparkline
 
 ## Features
 
-- **Connection management** — add, edit, save, connect/disconnect multiple OPC UA and MQTT
+- **Connection management** — add, edit, save, connect, and disconnect multiple OPC UA and MQTT
   connections from the UI. Definitions persist to `data/connections.json`.
-- **OPC UA browse + subscribe** — lazily browse the address space tree and tick "watch" on any
-  variable to subscribe to live value changes.
-- **MQTT topic subscribe** — subscribe to topics (with `+` / `#` wildcards) and see incoming
-  messages live.
-- **Live Values table** — unified view of all subscribed tags/topics with current value, data
-  type, a **flash on change**, last-changed time, and an in-memory trend sparkline
-  (last ~60 samples, no database).
+- **OPC UA browse + subscribe** — lazily browse the address-space tree and watch variables for
+  live value changes.
+- **MQTT topic subscribe** — subscribe to topics, including `+` and `#` wildcards, and see
+  incoming messages live.
+- **Overview dashboard** — inspect connection KPIs and per-signal metric cards with line, bar,
+  gauge, and boolean timeline visualizations.
+- **Live Values table** — view all subscribed tags and topics with their current value, data
+  type, quality, flash-on-change indicator, last-changed time, and an in-memory trend sparkline.
+- **Chart preferences** — choose a global chart type or override it for individual signals;
+  preferences persist in the browser.
+- **Light and dark themes** — follow the system theme or select one from the UI.
+
+History is intentionally in-memory only: the client retains roughly 60 samples per signal and
+restarts with an empty history.
 
 ## Architecture
 
-- **Backend** (`server/`): Node.js + Express + Socket.IO. `node-opcua` for OPC UA,
-  `mqtt` for MQTT. Recent values are kept in an in-memory ring buffer.
-- **Frontend** (`client/`): React + Vite single-page app, talking to the backend over Socket.IO.
+- **Backend** (`server/`) — Node.js, Express, and Socket.IO, with `node-opcua` for OPC UA and
+  `mqtt` for MQTT. The server retains up to 100 recent samples per signal in memory.
+- **Frontend** (`client/`) — a React 18 and Vite single-page app with Overview, Live Values, and
+  Explorer views. It communicates with the backend exclusively through Socket.IO.
+- **Charts** — dependency-free SVG components; no charting library is required.
 
 ## Getting started
 
