@@ -8,10 +8,10 @@ flash when a value changes, last-changed timestamps, and a small trend sparkline
 
 - **Connection management** — add, edit, save, connect/disconnect multiple OPC UA and MQTT
   connections from the UI. Definitions persist to `data/connections.json`.
-- **OPC UA browse + subscribe** — lazily browse the address space tree and tick "watch" on any
-  variable to subscribe to live value changes.
-- **MQTT topic subscribe** — subscribe to topics (with `+` / `#` wildcards) and see incoming
-  messages live.
+- **OPC UA browse, subscribe + write** — lazily browse the address space tree, watch variables
+  for live changes, and write test values directly from the explorer.
+- **MQTT subscribe + publish** — subscribe to topics (with `+` / `#` wildcards), see incoming
+  messages live, and publish test payloads with optional retain.
 - **Live Values table** — unified view of all subscribed tags/topics with current value, data
   type, a **flash on change**, last-changed time, and an in-memory trend sparkline
   (last ~60 samples, no database).
@@ -52,16 +52,15 @@ Then in the UI:
 
 1. Click **+ OPC UA**, name it, set the endpoint to `opc.tcp://localhost:4840`, save.
 2. Click **Connect**, then **Browse**.
-3. Expand the **Demo** folder and tick **watch** on `Counter`, `Random`, `Sine`, or `Toggle`.
-4. Watch the **Live Values** table update and flash on change.
+3. Expand the **Demo** folder and tick **watch** on `Counter`, `Random`, `Sine`, `Toggle`, or
+   the writable `Setpoint` variable.
+4. Watch the **Live Values** table update and flash on change. Use **write** beside `Setpoint` to
+   send a test value directly from the explorer.
 
 For MQTT, click **+ MQTT** and use a public broker such as
-`mqtt://test.mosquitto.org:1883`, connect, open **Topics**, and subscribe to `test/#` (or `#`).
-Publish a test message, e.g.:
-
-```bash
-mosquitto_pub -h test.mosquitto.org -t test/hello -m 42
-```
+`mqtt://test.mosquitto.org:1883`. Connect, open **Topics**, and subscribe to `test/#` (or `#`).
+Use **Publish a test message** in the same panel to send a payload to `test/hello`; because the
+subscription matches that topic, the message appears in Overview and Live Values.
 
 ## Configuration
 
