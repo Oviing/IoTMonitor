@@ -12,9 +12,15 @@ flash when a value changes, last-changed timestamps, and a small trend sparkline
   variable to subscribe to live value changes.
 - **MQTT topic subscribe** — subscribe to topics (with `+` / `#` wildcards) and see incoming
   messages live.
+- **Monitoring dashboard** — switch between overview, live-values, and explorer views without
+  losing subscriptions.
+- **Configurable charts** — visualize each signal as a line, bar, gauge, boolean timeline, or
+  sparkline using dependency-free SVG charts. Choose a global default or override individual
+  signals.
 - **Live Values table** — unified view of all subscribed tags/topics with current value, data
   type, a **flash on change**, last-changed time, and an in-memory trend sparkline
   (last ~60 samples, no database).
+- **Light and dark themes** — select a theme or follow the operating-system preference.
 
 ## Architecture
 
