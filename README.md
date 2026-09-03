@@ -12,9 +12,13 @@ flash when a value changes, last-changed timestamps, and a small trend sparkline
   variable to subscribe to live value changes.
 - **MQTT topic subscribe** — subscribe to topics (with `+` / `#` wildcards) and see incoming
   messages live.
-- **Live Values table** — unified view of all subscribed tags/topics with current value, data
-  type, a **flash on change**, last-changed time, and an in-memory trend sparkline
-  (last ~60 samples, no database).
+- **Live dashboards** — switch between an overview of KPI tiles and configurable metric cards,
+  a unified Live Values table, and the OPC UA/MQTT explorer.
+- **Flexible visualization** — display numeric signals as line charts, bars, gauges, or sparklines,
+  and boolean signals as timelines. Choose a global default or override individual signals.
+- **Real-time history** — current value, data type, quality, flash-on-change, last-changed time,
+  and the latest ~60 samples are kept in memory (no database).
+- **Light and dark themes** — follow the system preference by default or choose a theme in the UI.
 
 ## Architecture
 
